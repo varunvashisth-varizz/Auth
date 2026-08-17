@@ -1,0 +1,5 @@
+completed : jwt creation and workflow and get_current_user
+pending : integrate get_current_user with dashboard + add secretkey + algorithm
+          initiate database 
+
+          
