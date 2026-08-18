@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard · Auth</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="card wide">
+    <h1>Dashboard</h1>
+    <p class="subtitle">Signed in as <span id="username-slot">-</span></p>
+
+    <div id="message" class="message"></div>
+    <div id="content" style="display:none;">
+      <span id="method-badge" class="badge"></span>
+
+      <div class="section-title">User</div>
+      <dl class="kv">
+        <dt>ID</dt><dd id="user-id"></dd>
+        <dt>Username</dt><dd id="user-username"></dd>
+        <dt>Email</dt><dd id="user-email"></dd>
+        <dt>Logged in</dt><dd id="user-logged-in"></dd>
+        <dt>Expires</dt><dd id="user-expire"></dd>
+      </dl>
+
+      <div id="jwt-section" style="display:none;">
+        <div class="section-title">JWT details</div>
+        <dl class="kv">
+          <dt>Algorithm</dt><dd id="jwt-algorithm"></dd>
+          <dt>Provider</dt><dd id="jwt-provider"></dd>
+          <dt>Issued at</dt><dd id="jwt-issued-at"></dd>
+          <dt>Expires at</dt><dd id="jwt-expires-at"></dd>
+          <dt>Signature</dt><dd id="jwt-signature"></dd>
+        </dl>
+      </div>
+
+      <div id="session-section" style="display:none;">
+        <div class="section-title">Session details</div>
+        <p class="hint" id="session-message"></p>
+      </div>
+
+      <div id="gauth-section" style="display:none;">
+        <div class="section-title">Google OAuth details</div>
+        <p class="hint" id="gauth-message"></p>
+      </div>
+    </div>
+
+    <button id="logout-btn" class="btn-secondary logout" type="button">Log out</button>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const messageEl = document.getElementById("message");
+    const content = document.getElementById("content");
+
+    async function loadDashboard() {
+      const token = AuthStore.getToken();
+
+      if (!token) {
+        showMessage(
+          messageEl,
+          "No JWT session found. Session/Google dashboards aren't wired up yet either -- please sign in.",
+          "info"
+        );
+        return;
+      }
+
+      const res = await fetch("/dashboard", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (e) {
+        /* no body */
+      }
+
+      if (!res.ok) {
+        AuthStore.clearToken();
+        showMessage(messageEl, extractErrorMessage(data, "Session expired. Please sign in again."), "error");
+        setTimeout(() => (window.location.href = "/login"), 1200);
+        return;
+      }
+
+      render(data);
+    }
+
+    function render(dashboard) {
+      content.style.display = "block";
+
+      document.getElementById("username-slot").textContent = dashboard.user.username;
+      document.getElementById("user-id").textContent = dashboard.user.id;
+      document.getElementById("user-username").textContent = dashboard.user.username;
+      document.getElementById("user-email").textContent = dashboard.user.email;
+      document.getElementById("user-logged-in").textContent = dashboard.user.logged_in;
+      document.getElementById("user-expire").textContent = dashboard.user.expire;
+
+      const badge = document.getElementById("method-badge");
+      badge.textContent = dashboard.authentication_method.toUpperCase();
+      badge.classList.add(dashboard.authentication_method);
+
+      if (dashboard.authentication_method === "jwt" && dashboard.jwt) {
+        document.getElementById("jwt-section").style.display = "block";
+        document.getElementById("jwt-algorithm").textContent = dashboard.jwt.algorithm;
+        document.getElementById("jwt-provider").textContent = dashboard.jwt.provider;
+        document.getElementById("jwt-issued-at").textContent = dashboard.jwt.issued_at;
+        document.getElementById("jwt-expires-at").textContent = dashboard.jwt.expires_at;
+        // Signature is masked server-side already; never render a raw token here.
+        document.getElementById("jwt-signature").textContent = dashboard.jwt.signature;
+      } else if (dashboard.authentication_method === "session" && dashboard.session) {
+        document.getElementById("session-section").style.display = "block";
+        document.getElementById("session-message").textContent = dashboard.session.message;
+      } else if (dashboard.authentication_method === "gauth" && dashboard.gauth) {
+        document.getElementById("gauth-section").style.display = "block";
+        document.getElementById("gauth-message").textContent = dashboard.gauth.message;
+      }
+    }
+
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      AuthStore.clearToken();
+      window.location.href = "/login";
+    });
+
+    loadDashboard();
+  </script>
+</body>
+</html>

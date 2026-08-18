@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in · Auth</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="card">
+    <h1>Sign in</h1>
+    <p class="subtitle">Choose how you'd like to authenticate.</p>
+
+    <!-- 1. JWT Authentication: fully wired to POST /login/jwt -->
+    <form id="jwt-login-form" novalidate>
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" autocomplete="username" required />
+
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required />
+
+      <button type="submit" class="btn-primary">Sign in with JWT</button>
+    </form>
+
+    <div class="divider">or</div>
+
+    <!-- 2. Session Authentication: UI ready, backend endpoint is a placeholder -->
+    <button id="session-login-btn" class="btn-secondary" type="button">Sign in with Session</button>
+
+    <!-- 3. Google OAuth: UI ready, backend endpoint is a placeholder -->
+    <button id="google-login-btn" class="btn-secondary" type="button">Sign in with Google</button>
+
+    <div id="message" class="message"></div>
+
+    <p class="footer-link">Don't have an account? <a href="/register">Create one</a></p>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const jwtForm = document.getElementById("jwt-login-form");
+    const sessionBtn = document.getElementById("session-login-btn");
+    const googleBtn = document.getElementById("google-login-btn");
+    const messageEl = document.getElementById("message");
+
+    // --- 1. JWT: fully functional end-to-end ---
+    jwtForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideMessage(messageEl);
+
+      const formData = new URLSearchParams();
+      formData.set("username", jwtForm.username.value.trim());
+      formData.set("password", jwtForm.password.value);
+
+      const { ok, data } = await postForm("/login/jwt", formData);
+
+      if (!ok) {
+        showMessage(messageEl, extractErrorMessage(data, "Login failed."), "error");
+        return;
+      }
+
+      AuthStore.setToken(data.access_token);
+      showMessage(messageEl, "Signed in. Redirecting to your dashboard...", "success");
+      setTimeout(() => (window.location.href = "/dashboard-page"), 600);
+    });
+
+    // --- 2. Session: placeholder handler, backend returns 501 for now ---
+    sessionBtn.addEventListener("click", async () => {
+      hideMessage(messageEl);
+      const { ok, status, data } = await postForm("/login/session", new URLSearchParams());
+
+      if (status === 501) {
+        showMessage(
+          messageEl,
+          "Session authentication isn't implemented yet -- coming soon.",
+          "info"
+        );
+        return;
+      }
+      if (!ok) {
+        showMessage(messageEl, extractErrorMessage(data, "Session login failed."), "error");
+        return;
+      }
+      // Once implemented server-side (see docs/integration_guide.md),
+      // the backend would set an HttpOnly session cookie here and this
+      // branch would redirect to the dashboard, same as JWT above.
+      window.location.href = "/dashboard-page";
+    });
+
+    // --- 3. Google OAuth: placeholder handler, backend returns 501 for now ---
+    googleBtn.addEventListener("click", async () => {
+      hideMessage(messageEl);
+      const res = await fetch("/login/google");
+      if (res.status === 501) {
+        showMessage(
+          messageEl,
+          "Google OAuth isn't implemented yet -- coming soon.",
+          "info"
+        );
+        return;
+      }
+      // Once implemented, this would redirect the browser to Google's
+      // consent screen instead of calling fetch():
+      // window.location.href = "/login/google";
+    });
+  </script>
+</body>
+</html>

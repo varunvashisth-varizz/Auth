@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create account · Auth</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="card">
+    <h1>Create your account</h1>
+    <p class="subtitle">Sign up with a username, email, and password.</p>
+
+    <form id="register-form" novalidate>
+      <label for="username">Username</label>
+      <input
+        type="text"
+        id="username"
+        name="username"
+        autocomplete="username"
+        minlength="5"
+        maxlength="20"
+        pattern="[a-z0-9_-]+"
+        required
+      />
+      <div class="hint">5-20 chars, lowercase letters/digits/underscore/hyphen only.</div>
+
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" autocomplete="email" required />
+
+      <label for="password">Password</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        autocomplete="new-password"
+        minlength="8"
+        maxlength="64"
+        required
+      />
+      <div class="hint">
+        8-64 chars, with at least one uppercase, one lowercase, one digit, and one special character.
+      </div>
+
+      <button type="submit" class="btn-primary">Create account</button>
+    </form>
+
+    <div id="message" class="message"></div>
+
+    <p class="footer-link">Already have an account? <a href="/login">Sign in</a></p>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const form = document.getElementById("register-form");
+    const messageEl = document.getElementById("message");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideMessage(messageEl);
+
+      const payload = {
+        username: form.username.value.trim(),
+        email: form.email.value.trim(),
+        password: form.password.value,
+      };
+
+      const { ok, data } = await postJSON("/register", payload);
+
+      if (!ok) {
+        showMessage(messageEl, extractErrorMessage(data, "Registration failed."), "error");
+        return;
+      }
+
+      showMessage(messageEl, `Account "${data.username}" created. You can sign in now.`, "success");
+      form.reset();
+      setTimeout(() => (window.location.href = "/login"), 1200);
+    });
+  </script>
+</body>
+</html>
